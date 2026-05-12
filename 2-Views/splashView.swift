@@ -8,11 +8,18 @@
 import SwiftUI
 import PhotosUI
 import ConfettiSwiftUI
+import UIKit
 
 struct SplashView: View {
     let selectedColor: Color
     @Binding var selectedItem: PhotosPickerItem?
+    @Binding var selectedBatchItems: [PhotosPickerItem]
     @Binding var renderedImage: UIImage?
+    @Binding var batchRenderedImages: [RenderedExportImage]
+    let isBatchExportAnimationActive: Bool
+    let renderedImageGeneration: Int
+    let onRenderedImageDismissed: () -> Void
+    let onBatchRenderedImageDismissed: (RenderedExportImage.ID) -> Void
     @State private var confetti: Int = 0
     @State private var imageScale: CGFloat = 0.78
     @State private var imageOpacity: Double = 0
@@ -26,6 +33,7 @@ struct SplashView: View {
                     Text("SAVED!")
                         .monospaced()
                         .foregroundStyle(selectedColor)
+                        .fontWeight(.bold)
                 }
                 Image(uiImage: render)
                     .resizable()
@@ -36,7 +44,20 @@ struct SplashView: View {
                 Spacer().frame(height: 60)
             }
             .padding(40)
-            .task {
+            .task(id: renderedImageGeneration) {
+                imageScale = 0.78
+                imageOpacity = 0
+                imageRotation = -4
+                
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                triggerExportHaptic(style: .light)
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.48, blendDuration: 0.05)) {
+                    imageScale = 1
+                    confetti += 1
+                    imageOpacity = 1
+                    imageRotation = 0
+                }
+                
                 try? await Task.sleep(nanoseconds: 3_150_000_000)
                 
                 withAnimation(.spring(response: 0.34, dampingFraction: 0.55, blendDuration: 0.05)) {
@@ -49,23 +70,45 @@ struct SplashView: View {
                 withAnimation(.easeInOut(duration: 0.12)) {
                     renderedImage = nil
                 }
+                onRenderedImageDismissed()
             }
-            .onAppear(perform: {
-                imageScale = 0.78
-                imageOpacity = 0
-                imageRotation = -4
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.spring(response: 0.42, dampingFraction: 0.48, blendDuration: 0.05)) {
-                        imageScale = 1
-                        confetti += 1
-                        imageOpacity = 1
-                        imageRotation = 0
-                    }
-                }
-            })
             .confettiCannon(trigger: $confetti, num: 69, rainHeight: 300, radius: 400.0, hapticFeedback: true)
             .opacity(imageOpacity)
+            
+        } else if isBatchExportAnimationActive {
+            VStack(alignment: .leading){
+                HStack {
+                    Spacer()
+                    
+                    if batchRenderedImages.last?.isFinal == true {
+                        Text("SAVED!")
+                            .monospaced()
+                            .foregroundStyle(selectedColor)
+                            .fontWeight(.bold)
+                    }
+                }
+                
+                ZStack {
+                    ForEach(batchRenderedImages) { render in
+                        BatchRenderedImageView(render: render) {
+                            onBatchRenderedImageDismissed(render.id)
+                        }
+                    }
+                }
+                .padding(.vertical, 13)
+                
+                Spacer().frame(height: 60)
+            }
+            .padding(40)
+            .confettiCannon(trigger: $confetti, num: 69, rainHeight: 300, radius: 400.0, hapticFeedback: true)
+            .onAppear {
+                guard batchRenderedImages.last?.isFinal == true else { return }
+                confetti += 1
+            }
+            .onChange(of: batchRenderedImages.last?.id) { oldValue, newValue in
+                guard newValue != oldValue, batchRenderedImages.last?.isFinal == true else { return }
+                confetti += 1
+            }
             
         } else {
             ZStack{
@@ -74,14 +117,95 @@ struct SplashView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.3), value: selectedColor)
                 
-                PhotosPicker(selection: $selectedItem, matching: .images) {
-                    Label("<- border", systemImage: "photo")
-                        .bold()
-                        .tint(selectedColor)
+                HStack{
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Label("<- frame it", systemImage: "photo")
+                            .fontWeight(.bold)
+                            .tint(selectedColor)
+                    }
+                        
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        .fill(.secondary.opacity(1))
+                        .frame(width: 2, height: 18)
+                        .padding(.horizontal, 3)
+                        
+                    PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .tint(selectedColor)
+                            .font(.system(size: 16, weight: .bold))
+                    }
                 }
                 .tint(.black)
                 .monospaced()
             }
         }
+    }
+    
+    private func triggerExportHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+}
+
+private struct BatchRenderedImageView: View {
+    let render: RenderedExportImage
+    let onDismissed: () -> Void
+    
+    @State private var imageScale: CGFloat = 0.82
+    @State private var imageOpacity: Double = 0
+    @State private var imageRotation: Double = -4
+    
+    var body: some View {
+        Image(uiImage: render.image)
+            .resizable()
+            .scaledToFit()
+            .scaleEffect(imageScale)
+            .rotationEffect(.degrees(imageRotation))
+            .opacity(imageOpacity)
+            .task {
+                if render.isFinal {
+                    try? await Task.sleep(nanoseconds: 180_000_000)
+                }
+                
+                triggerExportHaptic(style: render.isFinal ? .medium : .light)
+                
+                withAnimation(.spring(
+                    response: render.isFinal ? 0.42 : 0.28,
+                    dampingFraction: render.isFinal ? 0.48 : 0.58,
+                    blendDuration: 0.04
+                )) {
+                    imageScale = 1
+                    imageOpacity = 1
+                    imageRotation = 0
+                }
+                
+                let holdDuration: UInt64 = render.isFinal ? 2_600_000_000 : 950_000_000
+                try? await Task.sleep(nanoseconds: holdDuration)
+                
+                if render.isFinal {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.55, blendDuration: 0.05)) {
+                        imageScale = 0.78
+                        imageOpacity = 0
+                        imageRotation = 4
+                    }
+                } else {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        imageScale = 0.9
+                        imageOpacity = 0
+                        imageRotation = 4
+                    }
+                }
+                
+                let fadeDuration: UInt64 = render.isFinal ? 450_000_000 : 220_000_000
+                try? await Task.sleep(nanoseconds: fadeDuration)
+                onDismissed()
+            }
+    }
+    
+    private func triggerExportHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
     }
 }

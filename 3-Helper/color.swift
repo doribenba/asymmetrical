@@ -41,5 +41,6 @@ extension Color {
         let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
         return luminance < 0.5
     }
+    
+    static let darkBlue = Color(red: 0.01, green: 0.30, blue: 1)
 }
-
