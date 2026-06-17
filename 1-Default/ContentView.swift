@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import StoreKit
 
 struct RenderedExportImage: Identifiable {
     let id = UUID()
@@ -15,7 +16,9 @@ struct RenderedExportImage: Identifiable {
 }
 
 struct ContentView: View {
+    @Environment(\.requestReview) var requestReview
     @State private var selectedUIImage: UIImage?
+    @State private var pendingReviewPrompt = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedBatchItems: [PhotosPickerItem] = []
     @State private var batchImages: [UIImage] = []
@@ -137,8 +140,14 @@ struct ContentView: View {
                 await MainActor.run {
                     withAnimation {
                         selectedItem = nil
-                        selectedUIImage = nil
-                        batchImages = loadedImages
+                        if loadedImages.count == 1 {
+                            selectedBatchItems = []
+                            selectedUIImage = loadedImages[0]
+                            batchImages = []
+                        } else {
+                            selectedUIImage = nil
+                            batchImages = loadedImages
+                        }
                     }
                 }
             }
@@ -155,7 +164,11 @@ struct ContentView: View {
             startBatchExportAnimationAfterEditorFade()
             return
         }
-        
+
+        if showsConfetti {
+            pendingReviewPrompt = true
+        }
+
         withAnimation(.easeInOut(duration: 0.26)) {
             if renderedImage == nil {
                 renderedImage = image
@@ -167,8 +180,13 @@ struct ContentView: View {
     }
     
     private func showNextRenderedImage() {
-        guard renderedImage == nil, !renderedImageQueue.isEmpty else { return }
-        
+        guard renderedImage == nil, !renderedImageQueue.isEmpty else {
+            if renderedImage == nil && pendingReviewPrompt {
+                triggerReviewIfNeeded()
+            }
+            return
+        }
+
         withAnimation(.easeInOut(duration: 0.26)) {
             renderedImage = renderedImageQueue.removeFirst()
             renderedImageGeneration += 1
@@ -187,26 +205,42 @@ struct ContentView: View {
     
     private func finishBatchExportAnimationIfReady() {
         guard isBatchExportComplete, batchRenderedImages.isEmpty else { return }
-        
+
         withAnimation(.easeInOut(duration: 0.26)) {
             isBatchExportAnimationActive = false
             isBatchExportBackdropVisible = false
             isBatchExportComplete = false
         }
+
+        triggerReviewIfNeeded()
     }
     
     private func startBatchExportAnimationAfterEditorFade() {
         guard !isBatchExportAnimationActive else { return }
-        
+
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 280_000_000)
-            
+
             guard isBatchExportBackdropVisible, !batchRenderedImages.isEmpty else { return }
-            
+
             withAnimation(.easeInOut(duration: 0.26)) {
                 isBatchExportAnimationActive = true
             }
         }
+    }
+
+    private func triggerReviewIfNeeded() {
+        guard pendingReviewPrompt else { return }
+
+        let currentCount = UserDefaults.standard.integer(forKey: "successful_exports_count")
+        let hasPrompted = UserDefaults.standard.bool(forKey: "has_prompted_for_review")
+
+        if currentCount >= 5 && !hasPrompted {
+            requestReview()
+            UserDefaults.standard.set(true, forKey: "has_prompted_for_review")
+        }
+
+        pendingReviewPrompt = false
     }
 }
 

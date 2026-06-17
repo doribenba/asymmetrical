@@ -24,6 +24,7 @@ struct SplashView: View {
     @State private var imageScale: CGFloat = 0.78
     @State private var imageOpacity: Double = 0
     @State private var imageRotation: Double = -4
+    @State private var batchFinalCelebrationOpacity: Double = 0
     
     var body: some View {
         if let render = renderedImage {
@@ -85,12 +86,25 @@ struct SplashView: View {
                             .monospaced()
                             .foregroundStyle(selectedColor)
                             .fontWeight(.bold)
+                            .opacity(batchFinalCelebrationOpacity)
                     }
                 }
                 
                 ZStack {
                     ForEach(batchRenderedImages) { render in
                         BatchRenderedImageView(render: render) {
+                            guard render.isFinal else { return }
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                batchFinalCelebrationOpacity = 1
+                            }
+                            confetti += 1
+                        } onFadeOutStarted: {
+                            guard render.isFinal else { return }
+                            
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.55, blendDuration: 0.05)) {
+                                batchFinalCelebrationOpacity = 0
+                            }
+                        } onDismissed: {
                             onBatchRenderedImageDismissed(render.id)
                         }
                     }
@@ -100,14 +114,19 @@ struct SplashView: View {
                 Spacer().frame(height: 60)
             }
             .padding(40)
-            .confettiCannon(trigger: $confetti, num: 69, rainHeight: 300, radius: 400.0, hapticFeedback: true)
+            .overlay {
+                Color.clear
+                    .confettiCannon(trigger: $confetti, num: 69, rainHeight: 300, radius: 400.0, hapticFeedback: true)
+                    .opacity(batchFinalCelebrationOpacity)
+                    .allowsHitTesting(false)
+            }
             .onAppear {
                 guard batchRenderedImages.last?.isFinal == true else { return }
-                confetti += 1
+                batchFinalCelebrationOpacity = 0
             }
             .onChange(of: batchRenderedImages.last?.id) { oldValue, newValue in
                 guard newValue != oldValue, batchRenderedImages.last?.isFinal == true else { return }
-                confetti += 1
+                batchFinalCelebrationOpacity = 0
             }
             
         } else {
@@ -137,6 +156,7 @@ struct SplashView: View {
                 }
                 .tint(.black)
                 .monospaced()
+                .preferredColorScheme(selectedColor.isdark ? .light : .dark)
             }
         }
     }
@@ -150,6 +170,8 @@ struct SplashView: View {
 
 private struct BatchRenderedImageView: View {
     let render: RenderedExportImage
+    let onPopStarted: () -> Void
+    let onFadeOutStarted: () -> Void
     let onDismissed: () -> Void
     
     @State private var imageScale: CGFloat = 0.82
@@ -168,6 +190,7 @@ private struct BatchRenderedImageView: View {
                     try? await Task.sleep(nanoseconds: 180_000_000)
                 }
                 
+                onPopStarted()
                 triggerExportHaptic(style: render.isFinal ? .medium : .light)
                 
                 withAnimation(.spring(
@@ -182,6 +205,10 @@ private struct BatchRenderedImageView: View {
                 
                 let holdDuration: UInt64 = render.isFinal ? 2_600_000_000 : 950_000_000
                 try? await Task.sleep(nanoseconds: holdDuration)
+                
+                if render.isFinal {
+                    onFadeOutStarted()
+                }
                 
                 if render.isFinal {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.55, blendDuration: 0.05)) {

@@ -18,6 +18,13 @@ struct EditorView: View {
     @State private var borderSize: Float = 20
     @State private var isBorderSizeOverlayVisible = false
     @State private var borderSizeOverlayGeneration = 0
+    @State private var selectedDoubleBorderLayer: DoubleBorderLayer = .outer
+    @State private var doubleOuterBorderSize: Float = 20
+    @State private var doubleInnerColor: Color = .black
+    @State private var doubleInnerBorderSize: Float = 20
+    
+    @State private var overlayText: String = "ASYMMETRICAL"
+    
     @State private var selectedAspectRatio = AspectRatioOption.original
     
     let image: UIImage
@@ -34,8 +41,13 @@ struct EditorView: View {
                     selectedUIImage: $selectedUIImage,
                     batchImages: $batchImages,
                     selectedAspectRatio: $selectedAspectRatio,
-                    selectedColor: selectedColor,
+                    selectedColor: activeControlColor,
                     borderSize: borderSize,
+                    doubleOuterColor: selectedColor,
+                    doubleOuterBorderSize: doubleOuterBorderSize,
+                    doubleInnerColor: doubleInnerColor,
+                    doubleInnerBorderSize: doubleInnerBorderSize,
+                    overlayText: overlayText,
                     image: image,
                     isBatchMode: isBatchMode,
                     onRenderedImage: onRenderedImage,
@@ -44,31 +56,36 @@ struct EditorView: View {
                 
                 ZStack {
                     if isBatchMode {
-                        if let displayImage = batchImages.first {
-                            if selectedAspectRatio.ratio == nil {
+                        if selectedAspectRatio.isAsymmetrical {
+                            asymmetricalPreview
+                        } else if selectedAspectRatio.isDouble {
+                            doubleBorderPreview
+                        } else if selectedAspectRatio.ratio == nil {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .padding(CGFloat(borderSize)/2)
+                                .background(selectedColor)
+                                .compositingGroup()
+                            
+                        } else {
+                            ZStack {
+                                selectedColor
                                 
-                                Image(uiImage: displayImage)
+                                Image(uiImage: image)
                                     .resizable()
                                     .scaledToFit()
                                     .padding(CGFloat(borderSize)/2)
-                                    .background(selectedColor)
-                                    .compositingGroup()
-                                
-                            } else {
-                                ZStack {
-                                    selectedColor
-                                    
-                                    Image(uiImage: displayImage)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .padding(CGFloat(borderSize)/2)
-                                }
-                                .aspectRatio(previewAspectRatio, contentMode: .fit)
-                                .compositingGroup()
                             }
+                            .aspectRatio(previewAspectRatio, contentMode: .fit)
+                            .compositingGroup()
                         }
                     } else {
-                        if selectedAspectRatio.ratio == nil {
+                        if selectedAspectRatio.isAsymmetrical {
+                            asymmetricalPreview
+                        } else if selectedAspectRatio.isDouble {
+                            doubleBorderPreview
+                        } else if selectedAspectRatio.ratio == nil {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFit()
@@ -90,7 +107,7 @@ struct EditorView: View {
                     }
                     
                     if isBorderSizeOverlayVisible {
-                        Text("\(Int(borderSize))")
+                        Text("\(Int(activeBorderSizeValue))")
                             .font(.system(size: 50, weight: .black, design: .monospaced))
                             .foregroundStyle(.white)
                             .blendMode(.difference)
@@ -100,12 +117,30 @@ struct EditorView: View {
                 .padding(.top, 13)
                 .padding(.bottom, 9)
                 .animation(.easeInOut(duration: 0.1), value: selectedColor)
+                .animation(.easeInOut(duration: 0.1), value: doubleInnerColor)
                 .animation(.easeInOut(duration: 0.18), value: selectedAspectRatio)
                 .onChange(of: borderSize) { _, _ in
                     showBorderSizeOverlay()
                 }
+                .onChange(of: doubleOuterBorderSize) { _, _ in
+                    guard selectedAspectRatio.isDouble, selectedDoubleBorderLayer == .outer else { return }
+                    showBorderSizeOverlay()
+                }
+                .onChange(of: doubleInnerBorderSize) { _, _ in
+                    guard selectedAspectRatio.isDouble, selectedDoubleBorderLayer == .inner else { return }
+                    showBorderSizeOverlay()
+                }
                 
-                ControlsView(selectedColor: $selectedColor, borderSize: $borderSize)
+            ControlsView(
+                selectedColor: $selectedColor,
+                borderSize: $borderSize,
+                selectedDoubleBorderLayer: $selectedDoubleBorderLayer,
+                doubleOuterBorderSize: $doubleOuterBorderSize,
+                doubleInnerColor: $doubleInnerColor,
+                doubleInnerBorderSize: $doubleInnerBorderSize,
+                selectedAspectRatio: $selectedAspectRatio,
+                overlay: $overlayText
+            )
             }
             .padding(40)
         }
@@ -114,11 +149,71 @@ struct EditorView: View {
         selectedAspectRatio.ratio ?? (isBatchMode ? 1 : evenBorderAspectRatio)
     }
     
+    private var asymmetricalPreview: some View {
+        GeometryReader { proxy in
+            let contentRect = AsymmetricalBorderLayout.contentRect(for: image.size, in: proxy.size)
+            
+            ZStack(alignment: .topLeading) {
+                selectedColor
+                
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: contentRect.width, height: contentRect.height)
+                    .position(x: contentRect.midX, y: contentRect.midY)
+                
+                asymmetricalOverlayText(in: proxy.size, contentRect: contentRect)
+            }
+        }
+        .aspectRatio(asymmetricalBorderAspectRatio, contentMode: .fit)
+        .compositingGroup()
+    }
+    
+    private var doubleBorderPreview: some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .padding(CGFloat(doubleInnerBorderSize) / 2)
+            .background(doubleInnerColor)
+            .padding(CGFloat(doubleOuterBorderSize) / 2)
+            .background(selectedColor)
+            .compositingGroup()
+    }
+    
+    @ViewBuilder
+    private func asymmetricalOverlayText(in size: CGSize, contentRect: CGRect) -> some View {
+        let text = overlayText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty {
+            let bottomHeight = max(0, size.height - contentRect.maxY)
+            
+            Text(text)
+                .font(.system(size: max(8, bottomHeight * 0.78), weight: .bold, design: .monospaced))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundStyle(selectedColor.isdark ? .white : .black)
+                .frame(width: contentRect.width, height: bottomHeight, alignment: .leading)
+                .position(x: contentRect.midX, y: contentRect.maxY + bottomHeight / 2)
+        }
+    }
+    
+    private var asymmetricalBorderAspectRatio: CGFloat {
+        AsymmetricalBorderLayout.canvasSize(for: image.size).width / AsymmetricalBorderLayout.canvasSize(for: image.size).height
+    }
+    
     private var evenBorderAspectRatio: CGFloat {
         let originalSize = image.size
         let base = min(originalSize.width, originalSize.height)
         let border = base * (CGFloat(borderSize / 4) / 100)
         return (originalSize.width + border * 2) / (originalSize.height + border * 2)
+    }
+    
+    private var activeControlColor: Color {
+        return selectedColor
+    }
+    
+    private var activeBorderSizeValue: Float {
+        guard selectedAspectRatio.isDouble else { return borderSize }
+        return selectedDoubleBorderLayer == .outer ? doubleOuterBorderSize : doubleInnerBorderSize
     }
     
     private func showBorderSizeOverlay() {

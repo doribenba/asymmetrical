@@ -16,6 +16,14 @@ struct AspectRatioOption: Identifiable, Equatable {
     let symbolName: String
     let ratio: CGFloat?
     
+    var isAsymmetrical: Bool {
+        id == "asymmetrical"
+    }
+    
+    var isDouble: Bool {
+        id == "double"
+    }
+    
     static let original = AspectRatioOption(
         id: "original",
         title: "EVEN",
@@ -27,6 +35,8 @@ struct AspectRatioOption: Identifiable, Equatable {
         .original,
         AspectRatioOption(id: "instagram", title: "INSTAGRAM", symbolName: "rectangle.portrait", ratio: 4 / 5),
         AspectRatioOption(id: "square", title: "SQUARE", symbolName: "square", ratio: 1),
+        AspectRatioOption(id: "asymmetrical", title: "ASYMMETRICAL", symbolName: "skew", ratio: nil),
+        AspectRatioOption(id: "double", title: "DOUBLE", symbolName: "inset.filled.square.dashed", ratio: nil),
         AspectRatioOption(id: "story", title: "STORY", symbolName: "rectangle.portrait", ratio: 9 / 16)
     ]
     
@@ -40,17 +50,29 @@ struct AspectRatioOption: Identifiable, Equatable {
     ]
 }
 
+enum DoubleBorderLayer {
+    case outer
+    case inner
+}
+
 struct HeaderView: View {
     @Binding var selectedItem: PhotosPickerItem?
     @Binding var selectedBatchItems: [PhotosPickerItem]
     @Binding var selectedUIImage: UIImage?
     @Binding var batchImages: [UIImage]
     @Binding var selectedAspectRatio: AspectRatioOption
-    
+
+    @Environment(\.requestReview) var requestReview
+
     @State private var shareItem: ShareItem?
     
     let selectedColor: Color
     let borderSize: Float
+    let doubleOuterColor: Color
+    let doubleOuterBorderSize: Float
+    let doubleInnerColor: Color
+    let doubleInnerBorderSize: Float
+    let overlayText: String
     let image: UIImage
     let isBatchMode: Bool
     let onRenderedImage: (UIImage, Bool, Bool) -> Void
@@ -93,10 +115,10 @@ struct HeaderView: View {
                     }
                     .disabled(isExporting)
                     
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(.secondary.opacity(0.55))
-                        .frame(width: 2, height: 18)
-                        .padding(.horizontal, 3)
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(.secondary.opacity(0.55))
+                    .frame(width: 2, height: 18)
+                    .padding(.horizontal, 3)
                 }
                 
                 Button {
@@ -199,7 +221,14 @@ struct HeaderView: View {
             image: image,
             width: borderSize,
             color: selectedColor,
-            aspectRatio: selectedAspectRatio.ratio
+            aspectRatio: selectedAspectRatio.ratio,
+            isAsymmetrical: selectedAspectRatio.isAsymmetrical,
+            isDouble: selectedAspectRatio.isDouble,
+            doubleOuterWidth: doubleOuterBorderSize,
+            doubleOuterColor: doubleOuterColor,
+            doubleInnerWidth: doubleInnerBorderSize,
+            doubleInnerColor: doubleInnerColor,
+            overlayText: overlayText
         )
         
         let share = borderedImage
@@ -214,17 +243,25 @@ struct HeaderView: View {
             image: image,
             width: borderSize,
             color: selectedColor,
-            aspectRatio: selectedAspectRatio.ratio
+            aspectRatio: selectedAspectRatio.ratio,
+            isAsymmetrical: selectedAspectRatio.isAsymmetrical,
+            isDouble: selectedAspectRatio.isDouble,
+            doubleOuterWidth: doubleOuterBorderSize,
+            doubleOuterColor: doubleOuterColor,
+            doubleInnerWidth: doubleInnerBorderSize,
+            doubleInnerColor: doubleInnerColor,
+            overlayText: overlayText
         )
         
         Task {
             do {
                 try await saveToPhotoLibrary(borderedImage)
-                
+                incrementExportCount()
+
                 await MainActor.run {
                     isExporting = false
                     onRenderedImage(borderedImage, false, true)
-                    
+
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedItem = nil
                         selectedUIImage = nil
@@ -255,11 +292,19 @@ struct HeaderView: View {
                         image: image,
                         width: borderSize,
                         color: selectedColor,
-                        aspectRatio: selectedAspectRatio.ratio
+                        aspectRatio: selectedAspectRatio.ratio,
+                        isAsymmetrical: selectedAspectRatio.isAsymmetrical,
+                        isDouble: selectedAspectRatio.isDouble,
+                        doubleOuterWidth: doubleOuterBorderSize,
+                        doubleOuterColor: doubleOuterColor,
+                        doubleInnerWidth: doubleInnerBorderSize,
+                        doubleInnerColor: doubleInnerColor,
+                        overlayText: overlayText
                     )
                     
                     try await saveToPhotoLibrary(borderedImage)
-                    
+//                    incrementExportCount()
+
                     await MainActor.run {
                         onRenderedImage(borderedImage, true, isLastImage)
                     }
@@ -300,6 +345,11 @@ struct HeaderView: View {
                 }
             }
         }
+    }
+
+    private func incrementExportCount() {
+        let currentCount = UserDefaults.standard.integer(forKey: "successful_exports_count")
+        UserDefaults.standard.set(currentCount + 1, forKey: "successful_exports_count")
     }
 }
 
