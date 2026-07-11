@@ -172,9 +172,10 @@ struct HeaderView: View {
             get: { exportErrorMessage != nil },
             set: { if !$0 { exportErrorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button("ALRIGHT", role: .cancel) {}
         } message: {
-            Text(exportErrorMessage ?? "The image could not be saved.")
+            //Text(exportErrorMessage ?? "The image could not be saved.")
+            Text("The application doesn't have your permission to save images. Go fix it.")
         }
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [ImageActivityItemSource(image: item.image)])

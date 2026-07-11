@@ -41,7 +41,7 @@ struct ControlsView: View {
             
             if !selectedAspectRatio.isAsymmetrical {
                 HStack{
-                    Slider(value: activeBorderSize, in: 0...100, step: 5)
+                    Slider(value: activeBorderSize, in: 0...125, step: 5)
                         .tint(Color.darkBlue)
                     Text(" WIDTH")
                         .monospaced()

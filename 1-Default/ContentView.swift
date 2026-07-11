@@ -8,6 +8,8 @@
 import SwiftUI
 import PhotosUI
 import StoreKit
+import UIKit
+import AVFoundation
 
 struct RenderedExportImage: Identifiable {
     let id = UUID()
@@ -22,6 +24,8 @@ struct ContentView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedBatchItems: [PhotosPickerItem] = []
     @State private var batchImages: [UIImage] = []
+    @State private var selectedVideoURL: URL? // New: for video selection
+    @State private var isVideoMode: Bool = false // New: track video mode
     @State private var selectedColor: Color = .white
     @State var renderedImage: UIImage?
     @State private var renderedImageQueue: [UIImage] = []
@@ -30,6 +34,7 @@ struct ContentView: View {
     @State private var isBatchExportAnimationActive = false
     @State private var isBatchExportBackdropVisible = false
     @State private var isBatchExportComplete = false
+    @State private var opacity = 0.0
 
     var body: some View {
         ZStack{
@@ -66,6 +71,18 @@ struct ContentView: View {
                         onBatchExportComplete: finishBatchExportAnimation
                     )
                     .transition(.opacity)
+//                } else if let videoURL = selectedVideoURL, isVideoMode {
+//                    // New: Video editor view
+//                    VideoEditorView(
+//                        selectedItem: $selectedItem,
+//                        selectedVideoURL: $selectedVideoURL,
+//                        isVideoMode: $isVideoMode,
+//                        selectedColor: $selectedColor,
+//                        videoURL: videoURL,
+//                        onRenderedImage: showRenderedImage, // Reuse for compatibility
+//                        onBatchExportComplete: finishBatchExportAnimation
+//                    )
+//                    .transition(.opacity)
                 } else if !batchImages.isEmpty {
                     EditorView(
                         selectedItem: $selectedItem,
@@ -99,21 +116,67 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.26), value: isBatchExportBackdropVisible)
             .animation(.easeInOut(duration: 0.26), value: selectedUIImage != nil)
             .animation(.easeInOut(duration: 0.26), value: batchImages.isEmpty)
+            .animation(.easeInOut(duration: 0.26), value: selectedVideoURL != nil)
+            .animation(.easeInOut(duration: 0.26), value: isVideoMode)
+        }
+        .opacity(opacity)
+        .onAppear {
+            withAnimation(.easeIn(duration: 0.6)) {
+                opacity = 1
+            }
         }
         .onChange(of: selectedItem) { oldValue, newValue in
             Task {
                 guard let newValue else { return }
-                
-                if let data = try? await newValue.loadTransferable(type: Data.self) {
-                    if let image = UIImage(data: data) {
-                        withAnimation {
-                            selectedBatchItems = []
-                            batchImages = []
-                            selectedUIImage = image
+
+                // Check what type of media was selected
+                let isImage = try? await newValue.loadTransferable(type: Data.self) != nil
+                let isVideo = try? await newValue.loadTransferable(type: URL.self) != nil
+
+                if isImage! {
+                    // Handle image selection
+                    // Reset video mode when selecting image
+                    isVideoMode = false
+                    selectedVideoURL = nil
+
+                    if let data = try? await newValue.loadTransferable(type: Data.self) {
+                        if let image = UIImage(data: data) {
+                            withAnimation {
+                                selectedBatchItems = []
+                                batchImages = []
+                                selectedUIImage = image
+                            }
+                        }
+                    }
+                } else if isVideo! {
+                    // Handle video selection
+                    // Reset image mode when selecting video
+                    isVideoMode = true
+                    selectedUIImage = nil
+                    selectedBatchItems = []
+                    batchImages = []
+
+                    if let url = try? await newValue.loadTransferable(type: URL.self) {
+                        // Validate video size (< 1GB)
+                        do {
+                            let fileSize = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                            let sizeInGB = Double(fileSize) / (1024 * 1024 * 1024)
+
+                            if sizeInGB > 1.0 {
+                                // Show error - video too large
+                                // For now, we'll just reset and let user try again
+                                // In a full implementation, we'd show an alert
+                                selectedVideoURL = nil
+                                isVideoMode = false
+                            } else {
+                                selectedVideoURL = url
+                            }
+                        } catch {
+                            selectedVideoURL = nil
+                            isVideoMode = false
                         }
                     }
                 }
-                
             }
         }
         .onChange(of: selectedBatchItems) { oldValue, newValue in
@@ -127,16 +190,16 @@ struct ContentView: View {
                     }
                     return
                 }
-                
+
                 var loadedImages: [UIImage] = []
-                
+
                 for item in pickedItems {
                     if let data = try? await item.loadTransferable(type: Data.self),
                        let image = UIImage(data: data) {
                         loadedImages.append(image)
                     }
                 }
-                
+
                 await MainActor.run {
                     withAnimation {
                         selectedItem = nil
@@ -153,7 +216,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func showRenderedImage(_ image: UIImage, isBatch: Bool = false, showsConfetti: Bool = false) {
         if isBatch {
             withAnimation(.easeInOut(duration: 0.26)) {
@@ -178,7 +241,29 @@ struct ContentView: View {
             }
         }
     }
-    
+
+    // New: Handle video export completion
+    private func showRenderedVideo(_ videoURL: URL, isBatch: Bool = false) {
+        if isBatch {
+            withAnimation(.easeInOut(duration: 0.26)) {
+                isBatchExportComplete = false
+                isBatchExportBackdropVisible = true
+                batchRenderedImages.append(RenderedExportImage(image: videoURL.thumbnailImage(), isFinal: true))
+            }
+            startBatchExportAnimationAfterEditorFade()
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.26)) {
+            if renderedImage == nil {
+                renderedImage = videoURL.thumbnailImage()
+                renderedImageGeneration += 1
+            } else {
+                renderedImageQueue.append(videoURL.thumbnailImage())
+            }
+        }
+    }
+
     private func showNextRenderedImage() {
         guard renderedImage == nil, !renderedImageQueue.isEmpty else {
             if renderedImage == nil && pendingReviewPrompt {
@@ -192,17 +277,17 @@ struct ContentView: View {
             renderedImageGeneration += 1
         }
     }
-    
+
     private func finishBatchExportAnimation() {
         isBatchExportComplete = true
         finishBatchExportAnimationIfReady()
     }
-    
+
     private func removeBatchRenderedImage(_ id: RenderedExportImage.ID) {
         batchRenderedImages.removeAll { $0.id == id }
         finishBatchExportAnimationIfReady()
     }
-    
+
     private func finishBatchExportAnimationIfReady() {
         guard isBatchExportComplete, batchRenderedImages.isEmpty else { return }
 
@@ -214,7 +299,7 @@ struct ContentView: View {
 
         triggerReviewIfNeeded()
     }
-    
+
     private func startBatchExportAnimationAfterEditorFade() {
         guard !isBatchExportAnimationActive else { return }
 
@@ -241,6 +326,22 @@ struct ContentView: View {
         }
 
         pendingReviewPrompt = false
+    }
+}
+
+// Extension to get thumbnail from URL
+extension URL {
+    func thumbnailImage() -> UIImage {
+        let asset = AVAsset(url: self)
+        let assetImgGenerate : AVAssetImageGenerator = AVAssetImageGenerator(asset: asset)
+        assetImgGenerate.appliesPreferredTrackTransform = true
+        let time : CMTime = CMTimeMake(value: 1, timescale: 2)
+        let img = try? assetImgGenerate.copyCGImage(at: time, actualTime: nil)
+        if let cgImage = img {
+            return UIImage(cgImage: cgImage)
+        } else {
+            return UIImage() // Return empty image if thumbnail generation fails
+        }
     }
 }
 
