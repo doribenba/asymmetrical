@@ -138,7 +138,7 @@ struct SplashView: View {
                 
                 HStack{
                     PhotosPicker(selection: $selectedItem, matching: .images) {
-                        Label("<- frame it", systemImage: "photo")
+                        Label("<- FRAME IT", systemImage: "photo")
                             .fontWeight(.bold)
                             .tint(selectedColor)
                     }

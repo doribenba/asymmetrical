@@ -16,9 +16,9 @@ struct splashScreenView: View {
             Color.black
                 .ignoresSafeArea()
             
-            Image("Icon")
+            Image("ICON_1")
                 .resizable()
-                .frame(width: 100, height: 100)
+                .frame(width: 100,height: 100)
                 .opacity(opacity)
                 .task {
                     try? await Task.sleep(for: .seconds(3))
@@ -26,7 +26,7 @@ struct splashScreenView: View {
                         opacity = 0
                     }
                 }
-        }
+        }.ignoresSafeArea()
     }
 }
 

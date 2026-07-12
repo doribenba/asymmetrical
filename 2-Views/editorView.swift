@@ -23,7 +23,7 @@ struct EditorView: View {
     @State private var doubleInnerColor: Color = .black
     @State private var doubleInnerBorderSize: Float = 20
     
-    @State private var overlayText: String = "ASYMMETRICAL"
+    @State private var overlayText: String = "TEXT HERE"
     
     @State private var selectedAspectRatio = AspectRatioOption.original
     

@@ -30,16 +30,8 @@ struct ControlsView: View {
 
                     ColorPicker("", selection: activeDoubleColor)
                         .labelsHidden()
+                    
                 }
-            } else {
-                ColorPicker("BORDER COLOR ->", selection: $selectedColor)
-                    .foregroundStyle(selectedColor)
-                    .monospaced()
-                    .fontWeight(.bold)
-                    .padding(.bottom, selectedAspectRatio.isAsymmetrical ? 8 : 0)
-            }
-            
-            if !selectedAspectRatio.isAsymmetrical {
                 HStack{
                     Slider(value: activeBorderSize, in: 0...125, step: 5)
                         .tint(Color.darkBlue)
@@ -49,23 +41,75 @@ struct ControlsView: View {
                         .foregroundStyle(activeControlColor)
                 }
             } else {
-                
-//                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-//                    .fill(.secondary.opacity(0.55))
-//                    .frame(height: 2)
-//                    .padding(.vertical, 3)
-//                    .padding(.bottom, 5)
-            
-                TextField("ENTER TEXT", text: $overlay)
-                    .textInputAutocapitalization(.characters)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-//                    .font(.system(.body, design: .monospaced, weight: .bold))
-                    .foregroundStyle(selectedColor.opacity(0.55))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.secondary.opacity(0.15))
-                    .cornerRadius(7)
+                if !selectedAspectRatio.isAsymmetrical {
+                    ColorPicker("BORDER COLOR", selection: $selectedColor)
+                        .foregroundStyle(selectedColor)
+                        .monospaced()
+                        .fontWeight(.bold)
+                        .padding(.bottom, selectedAspectRatio.isAsymmetrical ? 8 : 0)
+                    
+                    HStack{
+                        Slider(value: activeBorderSize, in: 0...125, step: 5)
+                            .tint(Color.darkBlue)
+                        Text(" WIDTH")
+                            .monospaced()
+                            .fontWeight(.bold)
+                            .foregroundStyle(activeControlColor)
+                    }
+                } else {
+                    HStack {
+                        TextField("ENTER TEXT", text: $overlay)
+                            .textInputAutocapitalization(.characters)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+        //                    .font(.system(.body, design: .monospaced, weight: .bold))
+                            .foregroundStyle(selectedColor.opacity(0.55))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.secondary.opacity(0.15))
+                            .cornerRadius(7)
+                        
+                        ColorPicker("", selection: $selectedColor)
+                            .foregroundStyle(selectedColor)
+                            .labelsHidden()
+                    }
+                    
+                }
             }
+//
+//            if !selectedAspectRatio.isAsymmetrical {
+//
+//                ColorPicker("", selection: $selectedColor)
+//                    .foregroundStyle(selectedColor)
+//                    .monospaced()
+//                    .padding(.bottom, selectedAspectRatio.isAsymmetrical ? 8 : 0)
+//
+//                HStack{
+//                    Slider(value: activeBorderSize, in: 0...125, step: 5)
+//                        .tint(Color.darkBlue)
+//                    Text(" WIDTH")
+//                        .monospaced()
+//                        .fontWeight(.bold)
+//                        .foregroundStyle(activeControlColor)
+//                }
+//            }
+//            } else {
+//                
+////                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+////                    .fill(.secondary.opacity(0.55))
+////                    .frame(height: 2)
+////                    .padding(.vertical, 3)
+////                    .padding(.bottom, 5)
+//            
+//                TextField("ENTER TEXT", text: $overlay)
+//                    .textInputAutocapitalization(.characters)
+//                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+////                    .font(.system(.body, design: .monospaced, weight: .bold))
+//                    .foregroundStyle(selectedColor.opacity(0.55))
+//                    .padding(.horizontal, 8)
+//                    .padding(.vertical, 4)
+//                    .background(.secondary.opacity(0.15))
+//                    .cornerRadius(7)
+//            }
         }
         .preferredColorScheme(activeControlColor.isdark ? .light : .dark)
     }
