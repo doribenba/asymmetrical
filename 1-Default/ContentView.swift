@@ -38,7 +38,11 @@ struct ContentView: View {
 
     var body: some View {
         ZStack{
-            selectedColor.inverted()
+            //selectedColor.inverted()
+//                .frame(maxWidth: .infinity, maxHeight: .infinity)
+//                .ignoresSafeArea()
+//                .animation(.easeInOut(duration: 0.3), value: selectedColor)
+            (selectedColor.isdark ? Color.white : Color.black)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.3), value: selectedColor)

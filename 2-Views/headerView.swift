@@ -81,19 +81,13 @@ struct HeaderView: View {
     // MARK: - Removable Export Completion State
     @State private var exportErrorMessage: String? = nil
     @State private var isExporting: Bool = false
+    @State private var showDiscardAlert = false
     
     var body: some View {
         VStack{
             HStack{
                 Button {
-                    withAnimation {
-                        closeEditor()
-                    }
-                    if isBatchMode {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                batchImages = []
-                            }
-                        }
+                    showDiscardAlert = true
                 } label: {
                     Image(systemName: "x.circle")
                         .tint(selectedColor)
@@ -177,6 +171,21 @@ struct HeaderView: View {
             //Text(exportErrorMessage ?? "The image could not be saved.")
             Text("The application doesn't have your permission to save images. Go fix it.")
         }
+        .alert("DISCARD EDITS?", isPresented: $showDiscardAlert) {
+            Button("DISCARD", role: .destructive) {
+                withAnimation {
+                    closeEditor()
+                }
+                if isBatchMode {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        batchImages = []
+                    }
+                }
+            }
+            Button("CANCEL", role: .cancel) {}
+        } message: {
+            Text("Your current edits won't be saved.")
+        }
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [ImageActivityItemSource(image: item.image)])
         }
@@ -220,7 +229,7 @@ struct HeaderView: View {
         
         let borderedImage = createBorder(
             image: image,
-            width: borderSize,
+            width: calculateBorder(border: borderSize),
             color: selectedColor,
             aspectRatio: selectedAspectRatio.ratio,
             isAsymmetrical: selectedAspectRatio.isAsymmetrical,
@@ -242,7 +251,7 @@ struct HeaderView: View {
         
         let borderedImage = createBorder(
             image: image,
-            width: borderSize,
+            width: calculateBorder(border: borderSize),
             color: selectedColor,
             aspectRatio: selectedAspectRatio.ratio,
             isAsymmetrical: selectedAspectRatio.isAsymmetrical,
@@ -291,7 +300,7 @@ struct HeaderView: View {
                     let isLastImage = imageIndex == imagesToExport.index(before: imagesToExport.endIndex)
                     let borderedImage = createBorder(
                         image: image,
-                        width: borderSize,
+                        width: calculateBorder(border: borderSize),
                         color: selectedColor,
                         aspectRatio: selectedAspectRatio.ratio,
                         isAsymmetrical: selectedAspectRatio.isAsymmetrical,

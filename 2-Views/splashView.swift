@@ -131,32 +131,46 @@ struct SplashView: View {
             
         } else {
             ZStack{
-                selectedColor.inverted()
+                //selectedColor.inverted()
+                (selectedColor.isdark ? Color.white : Color.black)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.3), value: selectedColor)
                 
-                HStack{
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        Label("<- FRAME IT", systemImage: "photo")
-                            .fontWeight(.bold)
-                            .tint(selectedColor)
-                    }
+                VStack {
+                    HStack{
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
+                            Label("<- FRAME IT", systemImage: "photo")
+                                .fontWeight(.bold)
+                                .tint(selectedColor)
+                        }
                         
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(.secondary.opacity(1))
-                        .frame(width: 2, height: 18)
-                        .padding(.horizontal, 3)
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                            .fill(.secondary.opacity(1))
+                            .frame(width: 2, height: 18)
+                            .padding(.horizontal, 3)
                         
-                    PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .tint(selectedColor)
-                            .font(.system(size: 16, weight: .bold))
+                        PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .tint(selectedColor)
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                            .fill(.secondary.opacity(1))
+                            .frame(width: 2, height: 18)
+                            .padding(.horizontal, 3)
+                        
+                        PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
+                            Image(systemName: "gear")
+                                .tint(Color.darkBlue)
+                                .font(.system(size: 16, weight: .bold))
+                        }
                     }
+                    .tint(.black)
+                    .monospaced()
+                    .preferredColorScheme(selectedColor.isdark ? .light : .dark)
                 }
-                .tint(.black)
-                .monospaced()
-                .preferredColorScheme(selectedColor.isdark ? .light : .dark)
             }
         }
     }

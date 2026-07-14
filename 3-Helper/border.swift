@@ -152,13 +152,13 @@ private func createDoubleBorder(
 ) -> UIImage {
     let innerImage = createBorder(
         image: image,
-        width: innerWidth,
+        width: calculateBorder(border: innerWidth),
         color: innerColor
     )
     
     return createBorder(
         image: innerImage,
-        width: outerWidth,
+        width: calculateBorder(border: outerWidth),
         color: outerColor
     )
 }
@@ -218,5 +218,52 @@ private extension UIColor {
         
         let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
         return luminance < 0.5
+    }
+}
+
+func calculateBorder(border: Float) -> Float {
+    switch border {
+    case 5:
+        return 5
+    case 10:
+        return 7
+    case 15:
+        return 10
+    case 20:
+        return 15
+    case 25:
+        return 22
+    case 30:
+        return 30
+    case 35:
+        return 35
+    case 40:
+        return 40
+    case 45:
+        return 50
+    case 50:
+        return 55
+    case 55:
+        return 60
+    case 60:
+        return 67
+    case 65:
+        return 72
+    case 70:
+        return 77
+    case 75:
+        return 82
+    case 80:
+        return 90
+    case 85:
+        return 100
+    case 90:
+        return 110
+    case 95:
+        return 120
+    case 100:
+        return 135
+    default:
+        return 0
     }
 }

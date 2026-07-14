@@ -20,12 +20,13 @@ struct EditorView: View {
     @State private var borderSizeOverlayGeneration = 0
     @State private var selectedDoubleBorderLayer: DoubleBorderLayer = .outer
     @State private var doubleOuterBorderSize: Float = 20
-    @State private var doubleInnerColor: Color = .black
-    @State private var doubleInnerBorderSize: Float = 20
+    @State private var doubleInnerColor: Color = .newYellow
+    @State private var doubleInnerBorderSize: Float = 90
     
-    @State private var overlayText: String = "TEXT HERE"
+    @State private var overlayText: String = ""
     
     @State private var selectedAspectRatio = AspectRatioOption.original
+    @FocusState private var isInputFocused: Bool
     
     let image: UIImage
     var isBatchMode = false
@@ -64,7 +65,7 @@ struct EditorView: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFit()
-                                .padding(CGFloat(borderSize)/2)
+                                .padding(CGFloat(calculateBorder(border: borderSize))/2)
                                 .background(selectedColor)
                                 .compositingGroup()
                             
@@ -75,7 +76,7 @@ struct EditorView: View {
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFit()
-                                    .padding(CGFloat(borderSize)/2)
+                                    .padding(CGFloat(calculateBorder(border: borderSize))/2)
                             }
                             .aspectRatio(previewAspectRatio, contentMode: .fit)
                             .compositingGroup()
@@ -89,7 +90,7 @@ struct EditorView: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFit()
-                                .padding(CGFloat(borderSize)/2)
+                                .padding(CGFloat(calculateBorder(border: borderSize))/2)
                                 .background(selectedColor)
                                 .compositingGroup()
                         } else {
@@ -99,7 +100,7 @@ struct EditorView: View {
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFit()
-                                    .padding(CGFloat(borderSize)/2)
+                                    .padding(CGFloat(calculateBorder(border: borderSize))/2)
                             }
                             .aspectRatio(previewAspectRatio, contentMode: .fit)
                             .compositingGroup()
@@ -139,10 +140,15 @@ struct EditorView: View {
                 doubleInnerColor: $doubleInnerColor,
                 doubleInnerBorderSize: $doubleInnerBorderSize,
                 selectedAspectRatio: $selectedAspectRatio,
-                overlay: $overlayText
+                overlay: $overlayText,
+                isInputFocused: $isInputFocused
             )
             }
             .padding(40)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isInputFocused = false
+            }
         }
     
     private var previewAspectRatio: CGFloat {
@@ -173,9 +179,9 @@ struct EditorView: View {
         Image(uiImage: image)
             .resizable()
             .scaledToFit()
-            .padding(CGFloat(doubleInnerBorderSize) / 2)
+            .padding(CGFloat(calculateBorder(border: doubleInnerBorderSize)) / 2)
             .background(doubleInnerColor)
-            .padding(CGFloat(doubleOuterBorderSize) / 2)
+            .padding(CGFloat(calculateBorder(border: doubleOuterBorderSize)) / 2)
             .background(selectedColor)
             .compositingGroup()
     }

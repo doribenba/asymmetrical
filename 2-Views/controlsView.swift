@@ -16,6 +16,7 @@ struct ControlsView: View {
     @Binding var doubleInnerBorderSize: Float
     @Binding var selectedAspectRatio: AspectRatioOption
     @Binding var overlay: String
+    @FocusState.Binding var isInputFocused: Bool
 //    @State var transparent: Bool = false
     
     var body: some View {
@@ -33,7 +34,7 @@ struct ControlsView: View {
                     
                 }
                 HStack{
-                    Slider(value: activeBorderSize, in: 0...125, step: 5)
+                    Slider(value: activeBorderSize, in: 0...100, step: 5)
                         .tint(Color.darkBlue)
                     Text(" WIDTH")
                         .monospaced()
@@ -49,7 +50,7 @@ struct ControlsView: View {
                         .padding(.bottom, selectedAspectRatio.isAsymmetrical ? 8 : 0)
                     
                     HStack{
-                        Slider(value: activeBorderSize, in: 0...125, step: 5)
+                        Slider(value: activeBorderSize, in: 0...100, step: 5)
                             .tint(Color.darkBlue)
                         Text(" WIDTH")
                             .monospaced()
@@ -59,6 +60,7 @@ struct ControlsView: View {
                 } else {
                     HStack {
                         TextField("ENTER TEXT", text: $overlay)
+                            .focused($isInputFocused)
                             .textInputAutocapitalization(.characters)
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
         //                    .font(.system(.body, design: .monospaced, weight: .bold))
