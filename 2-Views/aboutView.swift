@@ -12,9 +12,11 @@ import StoreKit
 
 struct SettingsView: View {
 
-    // Standalone state — not connected to the rest of the app.
+    @Environment(\.dismiss) private var dismiss
+
+    // accentColor passed in from the parent; falls back to .white in preview.
+    var accentColor: Color = .white
     @State private var minimalMode: Bool = false
-    @State private var accentColor: Color = .white
 
     var body: some View {
         ZStack {
@@ -25,7 +27,7 @@ struct SettingsView: View {
                 // ── Top bar ───────────────────────────────────────────────
                 HStack {
                     Button {
-                        // not hooked up
+                        dismiss()
                     } label: {
                         Image(systemName: "x.circle")
                             .tint(accentColor)
@@ -101,16 +103,16 @@ struct SettingsView: View {
                 }
 
                 // Top fade — fades scrolled content under the x button
-                LinearGradient(
-                    stops: [
-                        .init(color: accentColor.isdark ? .white : .black, location: 0),
-                        .init(color: (accentColor.isdark ? Color.white : Color.black).opacity(0), location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 28)
-                .allowsHitTesting(false)
+//                LinearGradient(
+//                    stops: [
+//                        .init(color: accentColor.isdark ? .white : .black, location: 0),
+//                        .init(color: (accentColor.isdark ? Color.white : Color.black).opacity(0), location: 1)
+//                    ],
+//                    startPoint: .top,
+//                    endPoint: .bottom
+//                )
+//                .frame(height: 28)
+//                .allowsHitTesting(false)
                 } // ZStack
             }
         }
@@ -239,8 +241,8 @@ struct SettingsView: View {
     // MARK: - Actions
 
     private func openMail() {
-        let email = "dorianbenbassat@icloud.com"
-        let subject = "borderControl — Feedback"
+        let email = "doribenbass@gmail.com"
+        let subject = "Asymmetrical — Feedback"
         let encoded = "mailto:\(email)?subject=\(subject)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: encoded) {
             UIApplication.shared.open(url)
@@ -248,8 +250,8 @@ struct SettingsView: View {
     }
 
     private func openBugReport() {
-        let email = "dorianbenbassat@icloud.com"
-        let subject = "borderControl — Bug Report"
+        let email = "doribenbass@gmail.com"
+        let subject = "Asymmetrical — Bug Report"
         let body = "Device: \(UIDevice.current.model)\niOS: \(UIDevice.current.systemVersion)\nApp Version: \(appVersion)\n\n— Describe the bug below —\n\n"
         let encoded = "mailto:\(email)?subject=\(subject)&body=\(body)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: encoded) {

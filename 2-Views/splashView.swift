@@ -21,10 +21,15 @@ struct SplashView: View {
     let onRenderedImageDismissed: () -> Void
     let onBatchRenderedImageDismissed: (RenderedExportImage.ID) -> Void
     @State private var confetti: Int = 0
+    @State private var showSettings = false
     @State private var imageScale: CGFloat = 0.78
     @State private var imageOpacity: Double = 0
     @State private var imageRotation: Double = -4
     @State private var batchFinalCelebrationOpacity: Double = 0
+    
+    private var greyColor: Color {
+        selectedColor.isdark ? Color.black : Color.white
+    }
     
     var body: some View {
         if let render = renderedImage {
@@ -137,12 +142,41 @@ struct SplashView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.3), value: selectedColor)
                 
-                VStack {
+                VStack() {
+                    
+//                    Spacer()
+//                    
+//                    PhotosPicker(selection: $selectedItem, matching: .images) {
+//                        Label("FRAME IMAGE", systemImage: "photo")
+//                            .fontWeight(.bold)
+//                            .tint(greyColor)
+//                    }
+//                    
+//                    PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
+//                        Label("BATCH SELECT", systemImage: "photo.on.rectangle.angled")
+//                            .fontWeight(.bold)
+//                            .tint(greyColor)
+//                    }
+//                    
+//                    Button {
+//                        showSettings = true
+//                    } label: {
+//                        Image(systemName: "gear")
+//                            .tint(greyColor)
+//                            .font(.system(size: 16, weight: .bold))
+//                        Text("MORE")
+//                            .fontWeight(.bold)
+//                            .tint(greyColor)
+//                    }
+//                    
+//                    Spacer()
+//                    Spacer()
+                    
                     HStack{
                         PhotosPicker(selection: $selectedItem, matching: .images) {
                             Label("<- FRAME IT", systemImage: "photo")
                                 .fontWeight(.bold)
-                                .tint(selectedColor)
+                                .tint(greyColor)
                         }
                         
                         RoundedRectangle(cornerRadius: 1.5, style: .continuous)
@@ -152,7 +186,7 @@ struct SplashView: View {
                         
                         PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
                             Image(systemName: "photo.on.rectangle.angled")
-                                .tint(selectedColor)
+                                .tint(greyColor)
                                 .font(.system(size: 16, weight: .bold))
                         }
                         
@@ -161,9 +195,11 @@ struct SplashView: View {
                             .frame(width: 2, height: 18)
                             .padding(.horizontal, 3)
                         
-                        PhotosPicker(selection: $selectedBatchItems, maxSelectionCount: 10, matching: .images) {
+                        Button {
+                            showSettings = true
+                        } label: {
                             Image(systemName: "gear")
-                                .tint(Color.darkBlue)
+                                .tint(greyColor)
                                 .font(.system(size: 16, weight: .bold))
                         }
                     }
@@ -171,7 +207,20 @@ struct SplashView: View {
                     .monospaced()
                     .preferredColorScheme(selectedColor.isdark ? .light : .dark)
                 }
+                .tint(.black)
+                .monospaced()
+                .preferredColorScheme(selectedColor.isdark ? .light : .dark)
+                .ignoresSafeArea()
+//                if showSettings {
+//                    NewAboutView(showSettings: $showSettings, selectedColor: selectedColor)
+//                        .transition(.opacity)
+//                }
             }
+            .sheet(isPresented: $showSettings) {
+                NewAboutView(selectedColor: selectedColor)
+                    .presentationDragIndicator(.visible)
+            }
+            /*.animation(.easeInOut(duration: 0.25), value: showSettings)*/
         }
     }
     
