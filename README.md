@@ -35,6 +35,6 @@ The project is organized around a SwiftUI-based interface and an image-processin
 
 This project is licensed under the Apache License 2.0. See the `LICENSE` file for more information.
 
-## Legacy Mockup (Borders)
+## Legacy Mockup
 
 ![mockup](https://github.com/user-attachments/assets/f4b61e73-f070-4829-8e94-a9d24b3b7bbe)
