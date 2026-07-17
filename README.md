@@ -8,6 +8,10 @@ The app provides a simple workflow for importing images, configuring frame param
 
 <img width="6000" height="4500" alt="mockASYM2" src="https://github.com/user-attachments/assets/78d9db85-dc1b-42f8-9f23-238ac47952b6" />
 
+## Beta Testing
+
+The beta is now available on [TestFlight](https://testflight.apple.com/join/bam5mwqF)!
+
 ## Features
 
 - Import and process multiple images
